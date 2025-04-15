@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+      .device-info {
+          position: absolute;
+          background: rgba(40, 40, 40, 0.9);
+          color: #fff;
+          padding: 8px 12px;
+          border-radius: 4px;
+          font-family: Arial;
+          font-size: 12px;
+          white-space: nowrap;
+          transform: translate(-50%, -100%); /* 默认位于模型上方 */
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          pointer-events: none;
+      }
+  </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+  let camera, scene, renderer;
+  const deviceElements = new Map(); // 存储模型与对应信息框的映射
+
+  init();
+  animate();
+
+  function init() {
+    // 初始化基础场景
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // 添加环境光
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+    // 加载模型
+    const loader = new THREE.GLTFLoader();
+    loader.load('../../public/industry013/industry013.glb', gltf => {
+      const model = gltf.scene;
+      scene.add(model);
+
+      // 遍历模型中的所有设备（示例：所有名称为device_开头的对象）
+      model.traverse(child => {
+        if (child.name.startsWith('device_')) {
+          createDeviceInfo(child); // 为每个设备创建信息框
+        }
+      });
+    });
+
+    camera.position.set(5, 5, 5);
+    camera.lookAt(0, 0, 0);
+  }
+
+  function createDeviceInfo(obj) {
+    // 创建信息框DOM元素
+    const infoElement = document.createElement('div');
+    infoElement.className = 'device-info';
+    document.body.appendChild(infoElement);
+
+    // 初始化设备数据
+    obj.userData = {
+      temperature: 25 + Math.random()*5,
+      status: 'normal',
+      infoElement: infoElement
+    };
+
+    // 存储映射关系
+    deviceElements.set(obj, infoElement);
+
+    // 初始定位
+    updateElementPosition(obj);
+  }
+
+  function updateElementPosition(obj) {
+    const worldPosition = new THREE.Vector3();
+    obj.getWorldPosition(worldPosition);
+
+    // 将3D坐标转换为屏幕坐标
+    const vector = worldPosition.project(camera);
+    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+
+    // 更新信息框位置
+    obj.userData.infoElement.style.left = `${x}px`;
+    obj.userData.infoElement.style.top = `${y}px`;
+  }
+
+  // 实时更新数据和位置
+  function updateAllDevices() {
+    deviceElements.forEach((element, obj) => {
+      // 更新数据（实际应用中替换为真实数据源）
+      obj.userData.temperature = Math.random() * 10 + 25;
+      obj.userData.status = obj.userData.temperature > 32 ? 'warning' : 'normal';
+
+      // 更新显示内容
+      element.innerHTML = `
+            ${obj.name}<br>
+            Temp: ${obj.userData.temperature.toFixed(1)}°C<br>
+            Status: <span style="color:${obj.userData.status === 'warning' ? '#ff4444' : '#44ff44'}">
+                ${obj.userData.status}
+            </span>
+        `;
+
+      // 更新位置
+      updateElementPosition(obj);
+    });
+  }
+
+  // 主循环
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+    updateAllDevices(); // 每帧更新
+  }
+
+  // 窗口大小适配
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
