@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+      .info-card {
+          position: absolute;
+          background: rgba(10, 20, 30, 0.9);
+          color: #00fffc;
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid rgba(0, 255, 252, 0.3);
+          box-shadow: 0 0 15px rgba(0, 255, 252, 0.2);
+          min-width: 200px;
+          transform: translate(-50%, -100%);
+          pointer-events: none;
+          transition: all 0.3s;
+          font-family: Arial, sans-serif;
+      }
+      .info-card h3 {
+          margin: 0 0 10px 0;
+          border-bottom: 1px solid #00fffc;
+          padding-bottom: 5px;
+      }
+  </style>
+</head>
+<body>
+<div id="container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+  let scene, camera, renderer, controls;
+  const infoCards = new Map();
+
+  init();
+  animate();
+
+  function init() {
+    // 初始化场景
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    // 添加灯光
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+    light.position.set(0, 20, 0);
+    scene.add(light);
+
+    // 添加示例模型
+    createDemoModels();
+
+    // 初始化控制器
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    camera.position.set(5, 5, 5);
+    controls.update();
+  }
+
+  function createDemoModels() {
+    // 创建三个测试模型
+    const geometries = [
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.SphereGeometry(0.5),
+      new THREE.ConeGeometry(0.5, 1)
+    ];
+
+    geometries.forEach((geo, index) => {
+      const material = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(index/3, 0.7, 0.5)
+      });
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.x = (index - 1) * 2;
+      mesh.name = `model-${index}`;
+      scene.add(mesh);
+
+      // 为每个模型创建信息框
+      createInfoCard(mesh, `Device ${index+1}`);
+    });
+  }
+
+  function createInfoCard(model, title) {
+    // 创建DOM元素
+    const card = document.createElement('div');
+    card.className = 'info-card';
+    card.innerHTML = `
+        <h3>${title}</h3>
+        <div class="content">
+            <p>Status: <span class="status">Normal</span></p>
+            <p>Temperature: <span class="temp">25°C</span></p>
+        </div>
+    `;
+    document.body.appendChild(card);
+
+    // 存储关联关系
+    infoCards.set(model, {
+      element: card,
+      offset: new THREE.Vector3(0, model.geometry.parameters.height/2 + 0.5, 0)
+    });
+  }
+
+  function updateCardPositions() {
+    infoCards.forEach((cardInfo, model) => {
+      // 获取模型的世界坐标
+      const worldPosition = new THREE.Vector3();
+      model.getWorldPosition(worldPosition);
+
+      // 添加垂直偏移
+      worldPosition.add(cardInfo.offset);
+
+      // 转换为屏幕坐标
+      const vector = worldPosition.project(camera);
+      const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+
+      // 更新卡片位置
+      cardInfo.element.style.left = `${x}px`;
+      cardInfo.element.style.top = `${y}px`;
+
+      // 当模型在视野外时隐藏卡片
+      const isVisible = vector.z > -1 && vector.z < 1;
+      cardInfo.element.style.display = isVisible ? 'block' : 'none';
+    });
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    updateCardPositions();
+    renderer.render(scene, camera);
+  }
+
+  // 窗口大小适配
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>

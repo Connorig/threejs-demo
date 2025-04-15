@@ -1,5 +1,9 @@
 <template>
   <div id="three"></div>
+  <div class="detail-panel" id="detailPanel">
+    <h2>设备详情</h2>
+    <div id="panelContent"></div>
+  </div>
   <Popover ref="popoverRef" :top="popoverTop" :left="popoverLeft" :data="popoverData"></Popover>
 </template>
 
@@ -17,9 +21,7 @@ import { checkNameIncludes, findParent } from '@/utils'
 
 import Popover from './Popover/index.vue'
 import { generateUUID } from 'three/src/math/MathUtils'
-import { Vector3 } from 'three'
-import droneTexture from '/public/testture.png'
-import { BackSide } from 'three/src/constants'
+import droneTexture from '/public/textture.png'
 
 let viewer: Viewer
 let modelLoader: ModelLoader
@@ -38,15 +40,18 @@ let modelSelect = ['zuo0', 'zuo1', 'zuo2', 'zuo3', 'zuo4', 'zuo5']
 let modelSelectName = ''
 let modelMoveName = ''
 let isModelSelectName = false
+const highlightBoxes = new Map()
+let selectedModel = null
 
 onMounted(() => {
+  // 初始化网络
   init()
+  // 创建模型
   initModel()
-  // animate()
-  // viewer.scene.traverse((item: THREE.Object3D) => {
-  //   // console.log(item, '0000000000')
-  // })
-  setInterval(updateAllDevices, 1000)
+  // 实时更新卡片与模型的位置
+  animate()
+  // 更新卡片数据(AJAX)
+  setInterval(updateAllDevices2, 1000)
 })
 
 // 主循环
@@ -56,13 +61,11 @@ function animate() {
   updateAllDevices() // 每帧更新
 }
 
-// 实时更新数据和位置
-function updateAllDevices() {
+function updateAllDevices2() {
   deviceElements.forEach((element, obj) => {
     // 更新数据（实际应用中替换为真实数据源）
     obj.userData.temperature = Math.random() * 10 + 25
     obj.userData.status = obj.userData.temperature > 32 ? 'warning' : 'normal'
-
     // 更新显示内容
     element.innerHTML = `
             ${obj.name}<br>
@@ -73,6 +76,28 @@ function updateAllDevices() {
                 ${obj.userData.status}
             </span>
         `
+    // 更新位置
+    updateElementPosition(obj)
+  })
+}
+
+// 实时更新数据和位置
+function updateAllDevices() {
+  deviceElements.forEach((element, obj) => {
+    // 更新数据（实际应用中替换为真实数据源）
+    obj.userData.temperature = Math.random() * 10 + 25
+    obj.userData.status = obj.userData.temperature > 32 ? 'warning' : 'normal'
+
+    // 更新显示内容
+    // element.innerHTML = `
+    //         ${obj.name}<br>
+    //         Temp: ${obj.userData.temperature.toFixed(1)}°C<br>
+    //         Status: <span style="color:${
+    //           obj.userData.status === 'warning' ? '#ff4444' : '#44ff44'
+    //         }">
+    //             ${obj.userData.status}
+    //         </span>
+    //     `
 
     // 更新位置
     updateElementPosition(obj)
@@ -84,8 +109,6 @@ const init = () => {
   // viewer.addGird()
   // viewer.addAxis()
   viewer.addStats()
-  // viewer.addAxis();
-  // viewer.addStats();
   viewer.initRaycaster()
 
   modelLoader = new ModelLoader(viewer)
@@ -95,9 +118,9 @@ const init = () => {
   boxHelperWrap = new BoxHelperWrap(viewer)
 
   // 事件
-  // viewer.emitter.on(Event.dblclick.raycaster, (list: THREE.Intersection[]) => {
-  //   onMouseClick(list)
-  // })
+  viewer.emitter.on(Event.dblclick.raycaster, (list: THREE.Intersection[]) => {
+    onMouseClick(list)
+  })
   //
   // viewer.emitter.on(Event.mousemove.raycaster, (list: THREE.Intersection[]) => {
   //   onMouseMove(list)
@@ -106,12 +129,15 @@ const init = () => {
 const deviceElements = new Map() // 存储模型与对应信息框的映射
 
 const initModel = async () => {
+  // 清空所有模型与卡片对应数据
   deviceElements.clear()
-  // 删除所有.device-info
+
+  // 删除所有.device-info html元素
   document.querySelectorAll('.device-info').forEach((e) => {
     e.parentNode.removeChild(e)
   })
 
+  // 添加地板
   // modelLoader.loadModelToScene('/models/plane.glb', (baseModel) => {
   //   const model = baseModel.gltf.scene
   //   // console.log('plane-------', model.children)
@@ -154,12 +180,6 @@ const initModel = async () => {
       { x: 40, z: -32, y: 1, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
       { x: 20, z: -32, y: 0, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' }
     ]
-
-    // let p = pos.map((p) => {
-    //   return [p.x + plant_width * -0.5, 1, p.z ]
-    // })
-    // console.log('p', p)
-
     let gp = ground?.position
     let p = []
     for (let i = 0; i < pos.length; i++) {
@@ -174,11 +194,13 @@ const initModel = async () => {
       let z = pos[i].z + offsetZ
       let y = pos[i].y
 
-      baseModel.setScalc(3)
+      baseModel.setScalc(3.5)
       baseModel.object.rotation.y = -Math.PI / pos[i].pi
       const model = baseModel.gltf.scene
-      z += 0.5
+      // z += 0.5
       model.position.set(gp.x + x, gp.y + y, gp.z + z)
+
+      // 对应创建管道坐标
       p.push([-model.position.x * 2, 1, model.position.z * 2])
 
       model.name = `设备-${i + 1}`
@@ -228,11 +250,15 @@ function createDeviceInfo(obj) {
   document.body.appendChild(infoElement)
 
   // 初始化设备数据
-  obj.userData = {
-    temperature: 25 + Math.random() * 5,
-    status: 'normal',
-    infoElement: infoElement
-  }
+  // obj.userData = {
+  //   temperature: 25 + Math.random() * 5,
+  //   status: 'normal',
+  //   infoElement: infoElement
+  // }
+
+  obj.userData.temperature = 25 + Math.random() * 5
+  obj.userData.status = 'normal'
+  obj.userData.infoElement = infoElement
 
   // 存储映射关系
   deviceElements.set(obj, infoElement)
@@ -275,49 +301,94 @@ const planeAnimate = (texture: any): Animate => {
   return animateFn
 }
 
+function clearSelection() {
+  // 移除所有高亮框
+  highlightBoxes.forEach((highlight, model) => {
+    viewer.scene.remove(highlight)
+    highlight.geometry.dispose()
+    highlight.material.dispose()
+  })
+  highlightBoxes.clear()
+
+  // 隐藏面板
+  document.getElementById('detailPanel').classList.remove('active')
+  selectedModel = null
+}
+
 const onMouseClick = (intersects: THREE.Intersection[]) => {
-  if (!intersects.length) return
+  if (!intersects.length) {
+    clearSelection()
+    return
+  } else {
+  }
+
   const selectedObject = intersects[0].object
 
+  // console.log('onMouseClick', selectedObject)
+
   let selectedObjectName = ''
+  let showParent = {}
   const findClickModel = (object: any) => {
-    console.log(object, 'object')
-    if (object.type === 'Group') {
+    // 实际鼠标选中的dom，不是初始化创建的dom而是他的子元素。
+    if (object.name.includes('设备')) {
       selectedObjectName = object.name
+      showParent = object
+      return
     }
-    if (object.parent && object.type !== 'Scene') {
+    if (object.parent) {
       findClickModel(object.parent)
     }
   }
   findClickModel(selectedObject)
-  console.log(selectedObjectName)
 
-  // if (!selectedObjectName || !selectedObjectName.includes('办公楼')) {
-  //   // this.scene.remove(this.label);
-  //   return;
-  // }
+  console.log('showParent', showParent.userData)
 
-  // const selectedModel = viewer.scene.getObjectByName(selectedObjectName);
-  console.log(selectedObject, 'selectedObject')
-
-  // 点击楼房
-  if (selectedObject.name.includes('zuo')) {
-    selectOffice(selectedObject.parent)
+  if (showParent) {
+    boxHelperWrap.attach(showParent)
   }
+  addSelectionEffect(showParent)
+  showDetailPanel(showParent)
+}
 
-  // 点击其他区域
-  if (!selectedObject.name.includes('zuo')) {
-    if (!isModelSelectName && oldOffice) {
-      let oldmodel = oldOffice.getObjectByName(modelMoveName)
-      office.object
-        .getObjectByName(modelMoveName)
-        .traverse(function (child: { isMesh: any; material: any; name: any }) {
-          if (child.isMesh) {
-            child.material = oldmodel.getObjectByName(child.name).material
-          }
-        })
-    }
-  }
+function showDetailPanel(model) {
+  const panel = document.getElementById('detailPanel')
+  const content = document.getElementById('panelContent')
+
+  // 更新面板内容
+  content.innerHTML = `
+        <h3>${model.name}</h3>
+        <p>位置: (${model.position.x.toFixed(2)},
+                  ${model.position.y.toFixed(2)},
+                  ${model.position.z.toFixed(2)})</p>
+        <p>状态: <span class="status">运行中</span></p>
+        <div class="sensor-data">
+            <p>温度: ${(Math.random() * 10 + 30) | 0}°C</p>
+            <p>负载: ${(Math.random() * 100) | 0}%</p>
+        </div>
+    `
+
+  // 显示面板
+  panel.classList.add('active')
+}
+
+function addSelectionEffect(model) {
+  // 创建红色高亮框
+  const geometry = new THREE.BoxGeometry(10, 10, 10)
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xff0044,
+    transparent: true,
+    opacity: 0.5,
+    depthTest: false
+  })
+  const highlight = new THREE.Mesh(geometry, material)
+
+  // 对齐到选中模型
+  highlight.position.copy(model.position)
+  highlight.rotation.copy(model.rotation)
+  viewer.scene.add(highlight)
+
+  // 存储关联
+  highlightBoxes.set(model, highlight)
 }
 
 function checkIsRack(obj: any): boolean {
@@ -342,7 +413,7 @@ const onMouseMove = (intersects: THREE.Intersection[]) => {
   let showParent = {}
   const findClickModel = (object: any) => {
     // 实际鼠标选中的dom，不是初始化创建的dom而是他的子元素。
-    if (object.name.includes('Cube_19')) {
+    if (object.name.includes('设备')) {
       selectedObjectName = object.name
       showParent = object
       return
@@ -352,64 +423,16 @@ const onMouseMove = (intersects: THREE.Intersection[]) => {
     }
   }
 
-  // const findClickModel = (object: any) => {
-  //   if (object.name.includes('zuo')) {
-  //     selectedObjectName = object.name;
-  //     return;
-  //   }
-  //   if (object.parent) {
-  //     findClickModel(object.parent);
-  //   }
-  // };
   findClickModel(selectedObject)
 
-  // console.log(selectedObjectName, '--selectedObjectName---')
-  // console.log(selectedObject, '------selectedObject---------')
+  console.log('showParent', showParent)
 
-  const rack = findParent(selectedObject, checkIsRack)
-
-  if (rack) {
-    boxHelperWrap.attach(showParent)
-    updateRackInfo(rack.name, rack.userData)
-  }
-
-  // if (!selectedObjectName || !selectedObjectName.includes('办公楼')) {
-  //   // 重置模型
-  //   // viewer.scene.children[viewer.scene.children.findIndex(o => o.name === '办公楼')] = office.object = oldOffice.clone();
-  //   return;
+  // const rack = findParent(selectedObject, checkIsRack)
+  //
+  // if (rack) {
+  //   boxHelperWrap.attach(showParent)
+  //   updateRackInfo(rack.name, rack.userData)
   // }
-
-  // modelSelect.forEach((item: any) => {
-  //   if (item === selectedObject.parent?.name) {
-  //     modelMoveName = item
-  //     if (modelSelectName === modelMoveName) return
-  //     office.object
-  //       .getObjectByName(item)
-  //       .traverse(function (child: { isMesh: any; material: THREE.MeshPhongMaterial }) {
-  //         if (child.isMesh) {
-  //           child.material = new THREE.MeshPhongMaterial({
-  //             side: THREE.DoubleSide,
-  //             transparent: true,
-  //             depthTest: false,
-  //             depthWrite: true, // 无法被选择，鼠标穿透
-  //             color: 'yellow',
-  //             opacity: 0.3
-  //           })
-  //         }
-  //       })
-  //   } else {
-  //     if (!isModelSelectName && oldOffice) {
-  //       let oldmodel = oldOffice.getObjectByName(item)
-  //       office.object
-  //         .getObjectByName(item)
-  //         .traverse(function (child: { isMesh: any; material: any; name: any }) {
-  //           if (child.isMesh) {
-  //             child.material = oldmodel.getObjectByName(child.name).material
-  //           }
-  //         })
-  //     }
-  //   }
-  // })
 }
 
 const updateRackInfo = (name: string, userData: Object) => {
@@ -471,43 +494,14 @@ const selectOffice = (model: any) => {
 var texture = null
 
 function initTubeModel(pointsArr) {
-  console.log('pointArr', pointsArr)
-  // pointsArr = [
-  //   [-1, 1, -2],
-  //   [-16, 1, -2]
-  //   // [-30, 1, -2],
-  //   // [-44, 1, -2]
-  // ]
-  //  pointsArr = [
-  //   //x  y   z
-  //   [1, 1, -2],
-  //   [-61, 1, -2]
-  //   // [21, 0, 1],
-  //   // [-3, 0, 1],
-  //   // [-3, 0, -18]
-  //   // [-10, 0, -18],
-  //   // [-10, 0, 5],
-  //   // [1, 0, 5],
-  //   // [1, 0, 24],
-  //   // [-27, 0, 24],
-  //   // [-27, 0, 18],
-  //   // [-46, 0, 19],
-  //   // [-46, 0, -4],
-  //   // [-25, 0, -6],
-  //   // [-25, 0, -19],
-  //   // [-35, 0, -20],
-  //   // [-35, 0, -26],
-  //   // [-30, 0, -30],
-  //   // [3, 0, -30]
-  // ]
   var curve = createPath(pointsArr)
-  var tubeGeometry = new THREE.TubeGeometry(curve, 1000, 0.5, 10, false)
+  var tubeGeometry = new THREE.TubeGeometry(curve, 1000, 0.7, 100, false)
   var textureLoader = new THREE.TextureLoader()
 
   texture = textureLoader.load(droneTexture)
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.x = 30
+  texture.repeat.x = 50
   texture.repeat.y = 1
   texture.offset.y = 0.1
 
@@ -541,8 +535,6 @@ function createPath(pointsArr) {
 }
 
 function renderScene() {
-  // TWEEN.update();
-  // orbit.update();
   // 使用requestAnimationFrame函数进行渲染
   requestAnimationFrame(renderScene)
   viewer.renderer.render(viewer.scene, viewer.camera)
@@ -571,5 +563,75 @@ function renderScene() {
   transform: translate(-40%, -200%); /* 默认位于模型上方 */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   pointer-events: none;
+}
+</style>
+
+<style>
+.info-card {
+  position: absolute;
+  background: rgba(10, 20, 30, 0.9);
+  color: #00fffc;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 252, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 252, 0.2);
+  min-width: 200px;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  transition: all 0.3s;
+  font-family: Arial, sans-serif;
+}
+
+.info-card h3 {
+  margin: 0 0 10px 0;
+  border-bottom: 1px solid #00fffc;
+  padding-bottom: 5px;
+}
+</style>
+
+<style>
+/* 左侧抽屉面板样式 */
+.detail-panel {
+  position: fixed;
+  left: -300px;
+  top: 20px;
+  width: 300px;
+  height: 90vh;
+  background: rgba(10, 25, 40, 0.95);
+  border-radius: 0 10px 10px 0;
+  padding: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 3px 0 15px rgba(0, 255, 252, 0.2);
+  border-right: 2px solid #00fffc;
+  color: #00fffc;
+  backdrop-filter: blur(10px);
+}
+
+.detail-panel.active {
+  left: 20px;
+}
+
+/* 选中高亮样式 */
+.selected-highlight {
+  position: absolute;
+  width: 110%;
+  height: 110%;
+  border: 2px solid #ff0044;
+  border-radius: 4px;
+  box-shadow: 0 0 15px #ff0044;
+  pointer-events: none;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0.8;
+  }
 }
 </style>

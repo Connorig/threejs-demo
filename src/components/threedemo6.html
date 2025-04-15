@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* 左侧抽屉面板样式 */
+        .detail-panel {
+            position: fixed;
+            left: -320px;
+            top: 20px;
+            width: 300px;
+            height: 90vh;
+            background: rgba(10, 25, 40, 0.95);
+            border-radius: 0 10px 10px 0;
+            padding: 20px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 3px 0 15px rgba(0, 255, 252, 0.2);
+            border-right: 2px solid #00fffc;
+            color: #00fffc;
+            backdrop-filter: blur(10px);
+        }
+
+        .detail-panel.active {
+            left: 20px;
+        }
+
+        /* 选中高亮样式 */
+        .selected-highlight {
+            position: absolute;
+            width: 110%;
+            height: 110%;
+            border: 2px solid #ff0044;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #ff0044;
+            pointer-events: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+            100% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div class="detail-panel" id="detailPanel">
+        <h2>设备详情</h2>
+        <div id="panelContent"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+let scene, camera, renderer, controls;
+let selectedModel = null;
+const highlightBoxes = new Map();
+
+init();
+animate();
+
+function init() {
+    // 初始化场景（保持之前的初始化代码不变）
+    // ...
+    setupClickInteraction();
+}
+
+function setupClickInteraction() {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    
+    document.addEventListener('click', (event) => {
+        // 转换鼠标坐标
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+        // 执行射线检测
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+        
+        if (intersects.length > 0) {
+            const model = intersects[0].object;
+            handleModelSelect(model);
+        } else {
+            clearSelection();
+        }
+    });
+}
+
+function handleModelSelect(model) {
+    // 清除之前的选择
+    if(selectedModel) clearSelection();
+    
+    // 设置新选择
+    selectedModel = model;
+    addSelectionEffect(model);
+    showDetailPanel(model);
+}
+
+function addSelectionEffect(model) {
+    // 创建红色高亮框
+    const geometry = new THREE.BoxGeometry(1.1, 1.1, 1.1);
+    const material = new THREE.MeshBasicMaterial({
+        color: 0xff0044,
+        transparent: true,
+        opacity: 0.5,
+        depthTest: false
+    });
+    const highlight = new THREE.Mesh(geometry, material);
+    
+    // 对齐到选中模型
+    highlight.position.copy(model.position);
+    highlight.rotation.copy(model.rotation);
+    scene.add(highlight);
+    
+    // 存储关联
+    highlightBoxes.set(model, highlight);
+}
+
+function showDetailPanel(model) {
+    const panel = document.getElementById('detailPanel');
+    const content = document.getElementById('panelContent');
+    
+    // 更新面板内容
+    content.innerHTML = `
+        <h3>${model.name}</h3>
+        <p>位置: (${model.position.x.toFixed(2)}, 
+                  ${model.position.y.toFixed(2)}, 
+                  ${model.position.z.toFixed(2)})</p>
+        <p>状态: <span class="status">运行中</span></p>
+        <div class="sensor-data">
+            <p>温度: ${Math.random()*10+30 | 0}°C</p>
+            <p>负载: ${Math.random()*100 | 0}%</p>
+        </div>
+    `;
+    
+    // 显示面板
+    panel.classList.add('active');
+}
+
+function clearSelection() {
+    // 移除所有高亮框
+    highlightBoxes.forEach((highlight, model) => {
+        scene.remove(highlight);
+        highlight.geometry.dispose();
+        highlight.material.dispose();
+    });
+    highlightBoxes.clear();
+    
+    // 隐藏面板
+    document.getElementById('detailPanel').classList.remove('active');
+    selectedModel = null;
+}
+
+// 在animate循环中保持高亮框同步
+function updateHighlights() {
+    highlightBoxes.forEach((highlight, model) => {
+        highlight.position.copy(model.position);
+        highlight.rotation.copy(model.rotation);
+    });
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    updateHighlights();
+    controls.update();
+    renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
