@@ -57,8 +57,26 @@ onMounted(() => {
 // 主循环
 function animate() {
   requestAnimationFrame(animate)
-  viewer.renderer.render(viewer.scene, viewer.camera)
   updateAllDevices() // 每帧更新
+  runningSemllTubes() // 设置小管道运动
+  viewer.controls.update()
+  viewer.renderer.render(viewer.scene, viewer.camera)
+}
+
+function runningSemllTubes() {
+  // 更新小管道位置
+  smallTubes.forEach((tube) => {
+    tube.userData.progress += 0.001
+    if (tube.userData.progress > 1) tube.userData.progress = 0
+
+    // 获取路径点和方向
+    const position = uPath.getPointAt(tube.userData.progress)
+    const tangent = uPath.getTangentAt(tube.userData.progress)
+
+    // 更新位置和方向
+    tube.position.copy(position)
+    tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent)
+  })
 }
 
 function updateAllDevices2() {
@@ -153,30 +171,77 @@ const initModel = async () => {
 
   const rackList: any[] = []
   let gls: any = [{ x: 0, z: 0 }]
-  const plant_width = 100
-  const plant_height = 40
+  const plant_width = 109
+  const plant_height = 45
+  const thickness = 2
   for (let i = 0; i < gls.length; i++) {
     // 添加方块地板
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(plant_width, plant_height),
+      new THREE.BoxGeometry(plant_width, plant_height, thickness),
       new THREE.MeshPhongMaterial({ color: 0x0f2137, depthWrite: false })
     )
     ground.rotation.x = -Math.PI / 2
     ground.position.setX(gls[i].x + plant_width * 0.5)
     ground.position.setZ(gls[i].z + -plant_height * 0.5)
     ground.receiveShadow = true
+
+    // 添加墙面
+    // 创建四面墙
+    // 参数设置
+    const floorSize = plant_width
+    const floorThickness = thickness
+    const wallHeight = 4 // 墙面高度改为50更明显
+    const wallThickness = 1
+
+    // 创建四面墙
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x0f2137 })
+
+    // 前墙 (z轴正方向)
+    const frontWall = new THREE.Mesh(
+      new THREE.BoxGeometry(floorSize, wallHeight, wallThickness),
+      wallMaterial
+    )
+    // frontWall.position.set( plant_width * 0.5, wallHeight / 2 - floorThickness / 2, -plant_height)
+    frontWall.position.set(plant_width / 2, 2, 0)
+
+    viewer.scene.add(frontWall)
+
+    // 后墙 (z轴负方向)
+    const backWall = new THREE.Mesh(
+      new THREE.BoxGeometry(floorSize, wallHeight, wallThickness),
+      wallMaterial
+    )
+    backWall.position.set(plant_width / 2, 2, -plant_height)
+    // viewer.scene.add(backWall)
+
+    // 左墙 (x轴负方向)
+    const leftWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, wallHeight, plant_height),
+      wallMaterial
+    )
+    leftWall.position.set(0, 2, -plant_height / 2)
+    viewer.scene.add(leftWall)
+
+    // 右墙 (x轴正方向)
+    const rightWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, wallHeight, plant_height),
+      wallMaterial
+    )
+    rightWall.position.set(plant_width, 2, -plant_height / 2)
+    viewer.scene.add(rightWall)
+
     modelLoader.viewer.scene.add(ground)
 
     let pos = [
-      { x: 1, z: -2, y: 1, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' },
-      { x: 20, z: -2, y: 2, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
-      { x: 40, z: -2, y: 3, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
-      { x: 60, z: -2, y: 0, status: 1, pi: 1.7, glb: '/industry013/industry022.glb' },
-      { x: 80, z: -2, y: 1, status: 1, pi: 2, glb: '/industry013/industry028.glb' },
-      { x: 100, z: -2, y: 1, status: 1, pi: 2, glb: '/industry013/industry031.glb' },
+      { x: 10, z: -12, y: 1, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' },
+      { x: 30, z: -12, y: 2, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
+      { x: 50, z: -12, y: 3, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
+      { x: 70, z: -12, y: 0, status: 1, pi: 1.7, glb: '/industry013/industry022.glb' },
+      { x: 90, z: -12, y: 1, status: 1, pi: 2, glb: '/industry013/industry028.glb' },
+      { x: 100, z: -12, y: 1, status: 1, pi: 2, glb: '/industry013/industry031.glb' },
       { x: 100, z: -32, y: 1, status: 1, pi: 2, glb: '/industry013/industry028.glb' },
       { x: 80, z: -32, y: 0, status: 1, pi: 1.7, glb: '/industry013/industry022.glb' },
-      { x: 60, z: -32, y: 1, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
+      { x: 60, z: -32, y: 3, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
       { x: 40, z: -32, y: 1, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
       { x: 20, z: -32, y: 0, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' }
     ]
@@ -194,14 +259,14 @@ const initModel = async () => {
       let z = pos[i].z + offsetZ
       let y = pos[i].y
 
-      baseModel.setScalc(3.5)
+      baseModel.setScalc(4)
       baseModel.object.rotation.y = -Math.PI / pos[i].pi
       const model = baseModel.gltf.scene
       // z += 0.5
       model.position.set(gp.x + x, gp.y + y, gp.z + z)
 
       // 对应创建管道坐标
-      p.push([-model.position.x * 2, 1, model.position.z * 2])
+      p.push([model.position.x, 1, model.position.z])
 
       model.name = `设备-${i + 1}`
       model.userData = {
@@ -216,7 +281,6 @@ const initModel = async () => {
       }
 
       model.traverse((item) => {
-        console.log('model==========', item, deviceElements)
         if (item.name.startsWith('设备')) {
           if (!deviceElements.has(item)) {
             createDeviceInfo(item) // 为每个设备创建信息框
@@ -225,6 +289,28 @@ const initModel = async () => {
         // p.push([gp.x + x, 1, gp.z + z])
         if (item.isMesh) {
           // item.material.color.set(cl)
+          // 保留原有贴图
+          const originalMap = item.material.map
+          const normalMap = item.material.normalMap
+          const aoMap = item.material.aoMap
+          const roughnessMap = item.material.roughnessMap
+          const metalnessMap = item.material.metalnessMap
+
+          // 创建新金属材质
+          item.material = new THREE.MeshPhysicalMaterial({
+            metalness: 0.9, // 金属度（0-1）
+            roughness: 0.1, // 粗糙度（0-1）
+            color: 0xffffff, // 基础颜色
+            // envMap: viewer.sence.bac.background, // 环境贴图
+            map: originalMap,
+            normalMap: normalMap,
+            aoMap: aoMap,
+            roughnessMap: roughnessMap,
+            metalnessMap: metalnessMap,
+            transparent: true,
+            transmission: 0.1, // 透光率（可选）
+            clearcoat: 0.9 // 清漆层效果（可选）
+          })
         }
       })
       modelLoader.viewer.scene.add(baseModel.object)
@@ -238,15 +324,65 @@ const initModel = async () => {
       })
     }
     //创建工序管道
-    initTubeModel(p)
+    // initTubeModel(p)
+    // initTubeModel2(p)
+    uPath = createPath(p)
+
+    let mainTube = createMainTube(uPath)
+    viewer.scene.add(mainTube)
+
+    createSmallTubes()
   }
   viewer.setRaycasterObjects(rackList)
+}
+
+// 创建3个流动小管道
+const smallTubes = []
+var uPath = null
+
+// 创建主管道
+function createMainTube(path) {
+  const geometry = new THREE.TubeGeometry(path, 1000, 0.5, 1000, false)
+
+  const material = new THREE.MeshPhongMaterial({
+    color: 0x0b3992,
+    transparent: true,
+    opacity: 0.2,
+    side: THREE.DoubleSide
+  })
+
+  return new THREE.Mesh(geometry, material)
+}
+
+// 创建流动小管道
+function createSmallTubes() {
+  const smallTubeGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 100)
+  const smallTubeMaterial = new THREE.MeshPhongMaterial({
+    color: 0x3c7cec,
+    emissive: 0x441100
+  })
+
+  // 创建3个不同起始位置的小管道
+  for (let i = 0; i < 100; i++) {
+    const tube = new THREE.Mesh(smallTubeGeometry, smallTubeMaterial)
+
+    // 初始参数设置
+    tube.userData = {
+      progress: i * 0.01 // 错开起始位置
+    }
+
+    // 初始方向调整
+    tube.rotation.x = Math.PI / 2
+    smallTubes.push(tube)
+    viewer.scene.add(tube)
+  }
 }
 
 function createDeviceInfo(obj) {
   // 创建信息框DOM元素
   const infoElement = document.createElement('div')
   infoElement.className = 'device-info'
+
   document.body.appendChild(infoElement)
 
   // 初始化设备数据
@@ -522,6 +658,79 @@ function initTubeModel(pointsArr) {
   renderScene()
 }
 
+function initTubeModel2(pointsArr) {
+  var curve = createPath(pointsArr)
+  var tubeGeometry = new THREE.TubeGeometry(curve, 1000, 1.0, 100, false)
+
+  var tubeMaterial = new THREE.MeshPhongMaterial({
+    // // map: texture,
+    // transparent: true,
+    // color: 0xffffff,
+    // side: THREE.DoubleSide
+    // // opacity: 0.4,
+    color: 0x606060,
+    transparent: true,
+    opacity: 0.7
+  })
+
+  // 设置数组材质对象作为网格模型材质参数
+  var mesh = new THREE.Mesh(tubeGeometry, tubeMaterial) //网格模型对象Mesh
+  mesh.position.y = 1
+  mesh.rotateZ(3.14)
+  mesh.scale.set(0.5, 0.5, 0.5) // 设置管道宽度
+  viewer.scene.add(mesh) //网格模型添加到场景中
+
+  // 创建流动粒子
+  function createFlowPipes() {
+    const smallPipeCount = 5 // 小管道数量
+    const smallPipeRadius = 0.6 // 稍小于主管道
+    const smallPipeLength = 5 // 小管道长度
+    const smallPipeSpeed = 0.1 // 移动速度
+    const startOffset = 2 // 小管道起始位置偏移量，防止重叠
+    // 创建小管道
+    const smallPipeGeometry = new THREE.CylinderGeometry(
+      smallPipeRadius,
+      smallPipeRadius,
+      smallPipeLength,
+      32
+    )
+    const particleMaterial = new THREE.MeshPhongMaterial({
+      color: 0x47d8f9,
+      emissive: 0x004400
+    })
+
+    viewer.scene.traverse((child) => {
+      if (child.geometry instanceof THREE.TubeGeometry) {
+        const path = child.geometry.parameters.path
+        const totalLength = path.getLength()
+
+        for (let i = 0; i < smallPipeCount; i++) {
+          // 创建流动粒子
+          const particle = new THREE.Mesh(smallPipeGeometry, particleMaterial)
+          // 对齐主管道方向
+          particle.rotation.z = Math.PI / 2
+
+          child.add(particle)
+
+          // 初始参数
+          particle.position.copy(path.getPointAt(0)) // 从路径起点开始
+          particle.position.y += i * (smallPipeLength / 2)
+          // particle.position.x += i * (smallPipeLength / 2)
+          // particle.position.z += i * (smallPipeLength / 2)
+          particle.userData = {
+            progress: 0,
+            speed: 0.015,
+            totalLength: totalLength
+          }
+        }
+      }
+    })
+  }
+
+  createFlowPipes(tubeGeometry)
+  renderScene()
+}
+
 function createPath(pointsArr) {
   pointsArr = pointsArr.map((point) => new THREE.Vector3(...point)) // 将参数数组转换成点数组的形式
 
@@ -538,7 +747,19 @@ function renderScene() {
   // 使用requestAnimationFrame函数进行渲染
   requestAnimationFrame(renderScene)
   viewer.renderer.render(viewer.scene, viewer.camera)
-  texture.offset.x -= 0.05
+  // texture.offset.x -= 0.05
+  viewer.scene.traverse((child) => {
+    if (child.userData.progress !== undefined) {
+      // 更新粒子位置
+      child.userData.progress += child.userData.speed
+      if (child.userData.progress > 1) child.userData.progress = 0
+
+      // 根据进度获取路径点
+      const path = child.parent.geometry.parameters.path
+      const newPosition = path.getPointAt(child.userData.progress)
+      child.position.copy(newPosition)
+    }
+  })
 }
 </script>
 
@@ -560,7 +781,7 @@ function renderScene() {
   border-radius: 4px;
   font-size: 16px;
   white-space: nowrap;
-  transform: translate(-40%, -200%); /* 默认位于模型上方 */
+  transform: translate(-50%, -200%); /* 默认位于模型上方 */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
