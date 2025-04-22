@@ -180,7 +180,7 @@ const initModel = async () => {
   gls.push(
     {
       floor: {
-        name: '1F',
+        name: '1F 1楼',
         enName: 'Second floor',
         x: 0,
         y: 0,
@@ -375,9 +375,12 @@ const initModel = async () => {
 
     let gp = ground?.position
 
+    const f2='https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_regular.typeface.json'
+    const chineseFontURL = "https://cdn.jsdelivr.net/gh/mrdoob/three.js/examples/fonts/helvetiker_regular.typeface.json";
+
     // 创建3D文字"一楼"
     loader.load(
-      'https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_regular.typeface.json',
+      chineseFontURL,
       function (font) {
         const textGeometry = new TextGeometry(gls[j].floor.name, {
           font: font,
