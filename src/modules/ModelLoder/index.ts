@@ -1,5 +1,6 @@
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import BaseModel from '../BaseModel'
 import type Viewer from '../Viewer'
 

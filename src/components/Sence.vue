@@ -9,6 +9,7 @@
 
 <script lang="ts" setup name="Sence">
 /* eslint-disable */
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { ref, onMounted, type Ref } from 'vue'
 import Viewer, { type Animate } from '@/modules/Viewer'
 import Floors from '@/modules/Floors'
@@ -22,6 +23,7 @@ import { checkNameIncludes, findParent } from '@/utils'
 import Popover from './Popover/index.vue'
 import { generateUUID } from 'three/src/math/MathUtils'
 import droneTexture from '/public/textture.png'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 
 let viewer: Viewer
 let modelLoader: ModelLoader
@@ -42,6 +44,7 @@ let modelMoveName = ''
 let isModelSelectName = false
 const highlightBoxes = new Map()
 let selectedModel = null
+const loader = new FontLoader()
 
 onMounted(() => {
   // 初始化网络
@@ -64,18 +67,20 @@ function animate() {
 }
 
 function runningSemllTubes() {
-  // 更新小管道位置
-  smallTubes.forEach((tube) => {
-    tube.userData.progress += 0.001
-    if (tube.userData.progress > 1) tube.userData.progress = 0
+  gls.forEach((item) => {
+    // 更新小管道位置
+    item.smallTubes.forEach((tube) => {
+      tube.userData.progress += 0.001
+      if (tube.userData.progress > 1) tube.userData.progress = 0
 
-    // 获取路径点和方向
-    const position = uPath.getPointAt(tube.userData.progress)
-    const tangent = uPath.getTangentAt(tube.userData.progress)
+      // 获取路径点和方向
+      const position = item.uPath.getPointAt(tube.userData.progress)
+      const tangent = item.uPath.getTangentAt(tube.userData.progress)
 
-    // 更新位置和方向
-    tube.position.copy(position)
-    tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent)
+      // 更新位置和方向
+      tube.position.copy(position)
+      tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent)
+    })
   })
 }
 
@@ -105,7 +110,6 @@ function updateAllDevices() {
     // 更新数据（实际应用中替换为真实数据源）
     obj.userData.temperature = Math.random() * 10 + 25
     obj.userData.status = obj.userData.temperature > 32 ? 'warning' : 'normal'
-
     // 更新显示内容
     // element.innerHTML = `
     //         ${obj.name}<br>
@@ -146,6 +150,8 @@ const init = () => {
 }
 const deviceElements = new Map() // 存储模型与对应信息框的映射
 
+const gls = []
+
 const initModel = async () => {
   // 清空所有模型与卡片对应数据
   deviceElements.clear()
@@ -170,19 +176,152 @@ const initModel = async () => {
   // })
 
   const rackList: any[] = []
-  let gls: any = [{ x: 0, z: 0 }]
+
+  gls.push(
+    {
+      floor: {
+        name: '1F',
+        enName: 'Second floor',
+        x: 0,
+        y: 0,
+        z: 0
+      },
+      x: 0,
+      z: 0,
+      devices: [
+        {
+          name: '真空熔炼炉',
+          x: 100,
+          z: -12,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.6,
+          glb: '/industry013/industry015.glb',
+          scalc: 4
+        },
+        {
+          name: '挤压机',
+          x: 50,
+          z: -12,
+          y: 0,
+          status: 1,
+          pi: Math.PI * 2,
+          glb: '/industry013/industry022.glb',
+          scalc: 10
+        },
+        {
+          name: '绞线机-1',
+          x: 50,
+          z: -50,
+          y: 2,
+          status: 1,
+          pi: Math.PI * 2,
+          glb: '/industry013/industry021.glb',
+          scalc: 5
+        },
+        {
+          name: '绞线机-2',
+          x: 66,
+          z: -50,
+          y: 2,
+          status: 1,
+          pi: Math.PI * 2,
+          glb: '/industry013/industry021.glb',
+          scalc: 5
+        },
+        {
+          name: '绞线机-3',
+          x: 80,
+          z: -50,
+          y: 2,
+          status: 1,
+          pi: Math.PI * 2,
+          glb: '/industry013/industry021.glb',
+          scalc: 5
+        }
+      ],
+      smallTubes: [],
+      uPath: []
+    },
+    {
+      floor: {
+        name: '2F',
+        enName: 'Second floor',
+        x: 0,
+        y: 0,
+        z: 0
+      },
+      x: 100,
+      z: 0,
+      tubus: 5,
+      devices: [
+        {
+          name: '微拉机',
+          x: 100,
+          z: -30,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.4,
+          glb: '/industry013/industry031.glb',
+          scalc: 4
+        },
+        {
+          name: '多孔退火炉-1',
+          x: 80,
+          z: -30,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.6,
+          glb: '/industry013/industry013.glb',
+          scalc: 8
+        },
+        {
+          name: '多孔退火炉-2',
+          x: 60,
+          z: -30,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.6,
+          glb: '/industry013/industry013.glb',
+          scalc: 8
+        },
+        {
+          name: '多孔退火炉-3',
+          x: 40,
+          z: -30,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.6,
+          glb: '/industry013/industry013.glb',
+          scalc: 8
+        },
+        {
+          name: '多孔退火炉-4',
+          x: 20,
+          z: -30,
+          y: 1,
+          status: 0,
+          pi: Math.PI / -0.6,
+          glb: '/industry013/industry013.glb',
+          scalc: 8
+        }
+      ],
+      smallTubes: [],
+      uPath: []
+    }
+  )
   const plant_width = 109
-  const plant_height = 45
+  const plant_height = 70
   const thickness = 2
-  for (let i = 0; i < gls.length; i++) {
+  for (let j = 0; j < gls.length; j++) {
     // 添加方块地板
     const ground = new THREE.Mesh(
       new THREE.BoxGeometry(plant_width, plant_height, thickness),
       new THREE.MeshPhongMaterial({ color: 0x0f2137, depthWrite: false })
     )
     ground.rotation.x = -Math.PI / 2
-    ground.position.setX(gls[i].x + plant_width * 0.5)
-    ground.position.setZ(gls[i].z + -plant_height * 0.5)
+    ground.position.setX(gls[j].x + plant_width * 0.5)
+    ground.position.setZ(gls[j].z + -plant_height * 0.5)
     ground.receiveShadow = true
 
     // 添加墙面
@@ -232,21 +371,55 @@ const initModel = async () => {
 
     modelLoader.viewer.scene.add(ground)
 
-    let pos = [
-      { x: 10, z: -12, y: 1, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' },
-      { x: 30, z: -12, y: 2, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
-      { x: 50, z: -12, y: 3, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
-      { x: 70, z: -12, y: 0, status: 1, pi: 1.7, glb: '/industry013/industry022.glb' },
-      { x: 90, z: -12, y: 1, status: 1, pi: 2, glb: '/industry013/industry028.glb' },
-      { x: 100, z: -12, y: 1, status: 1, pi: 2, glb: '/industry013/industry031.glb' },
-      { x: 100, z: -32, y: 1, status: 1, pi: 2, glb: '/industry013/industry028.glb' },
-      { x: 80, z: -32, y: 0, status: 1, pi: 1.7, glb: '/industry013/industry022.glb' },
-      { x: 60, z: -32, y: 3, status: 0, pi: 2, glb: '/industry013/industry021.glb' },
-      { x: 40, z: -32, y: 1, status: 1, pi: 1.6, glb: '/industry013/industry015.glb' },
-      { x: 20, z: -32, y: 0, status: 0, pi: 1.5, glb: '/industry013/industry013.glb' }
-    ]
+    let pos = gls[j].devices
+
     let gp = ground?.position
-    let p = []
+
+    // 创建3D文字"一楼"
+    loader.load(
+      'https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_regular.typeface.json',
+      function (font) {
+        const textGeometry = new TextGeometry(gls[j].floor.name, {
+          font: font,
+          size: 10,
+          height: 2,
+          curveSegments: 12,
+          bevelEnabled: true,
+          bevelThickness: 0.03,
+          bevelSize: 0.02,
+          bevelOffset: 0,
+          bevelSegments: 5
+        })
+
+        // 解决文字镜像问题的关键步骤：
+        // 1. 先居中文字
+        textGeometry.computeBoundingBox()
+        const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x
+        textGeometry.translate(-textWidth / 2, 0, 0)
+
+        // 2. 翻转几何体使其正面朝外
+        textGeometry.scale(-1, 1, 1) // X轴翻转
+
+        const textMaterial = new THREE.MeshPhongMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide // 双面材质确保翻转后可见
+        })
+
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial)
+        textMesh.position.x = 109 / 2 +(j*109) // 将文字放在地板上方
+        textMesh.position.y = 2 // 将文字放在地板上方
+        textMesh.position.z = -70 // 将文字放在地板上方
+        viewer.scene.add(textMesh)
+
+        // 设置相机位置
+        // camera.position.set(3, 3, 5);
+        // camera.lookAt(0, 0.5, 0); // 看向文字位置
+
+        // 渲染场景（无动画）
+        viewer.renderer.render(viewer.scene, viewer.camera)
+      }
+    )
+
     for (let i = 0; i < pos.length; i++) {
       let baseModel = await modelLoader.loadModelAsync(pos[i].glb)
       let offsetX
@@ -258,17 +431,16 @@ const initModel = async () => {
       let x = pos[i].x + offsetX
       let z = pos[i].z + offsetZ
       let y = pos[i].y
-
-      baseModel.setScalc(4)
-      baseModel.object.rotation.y = -Math.PI / pos[i].pi
+      // baseModel.setScalc(8,5,8)
+      baseModel.setScalc(pos[i].scalc)
+      baseModel.object.rotation.y = pos[i].pi
       const model = baseModel.gltf.scene
       // z += 0.5
       model.position.set(gp.x + x, gp.y + y, gp.z + z)
 
-      // 对应创建管道坐标
-      p.push([model.position.x, 1, model.position.z])
+      gls[j].uPath.push([model.position.x, 1, model.position.z])
 
-      model.name = `设备-${i + 1}`
+      model.name = `设备-${pos[i].name}`
       model.userData = {
         name: i + 1,
         deviceId: generateUUID(),
@@ -313,30 +485,26 @@ const initModel = async () => {
           })
         }
       })
+
       modelLoader.viewer.scene.add(baseModel.object)
+
       model.traverse((item) => {
-        // if (checkIsRack(item)) {
-        // if (item.name == 'Mesh_38') {
-        //   console.log(item)
-        // }
         rackList.push(item)
-        // }
       })
     }
-    //创建工序管道
-    // initTubeModel(p)
-    // initTubeModel2(p)
-    uPath = createPath(p)
-
+    //创建工序主要管道
+    uPath = createPath(gls[j].uPath)
+    gls[j].uPath = uPath
     let mainTube = createMainTube(uPath)
     viewer.scene.add(mainTube)
 
-    createSmallTubes()
+    // 创建小管道
+    createSmallTubes(gls[j])
   }
   viewer.setRaycasterObjects(rackList)
 }
 
-// 创建3个流动小管道
+// 创建n个流动小管道
 const smallTubes = []
 var uPath = null
 
@@ -355,7 +523,7 @@ function createMainTube(path) {
 }
 
 // 创建流动小管道
-function createSmallTubes() {
+function createSmallTubes(gls) {
   const smallTubeGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 100)
   const smallTubeMaterial = new THREE.MeshPhongMaterial({
     color: 0x3c7cec,
@@ -363,17 +531,17 @@ function createSmallTubes() {
   })
 
   // 创建3个不同起始位置的小管道
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 30; i++) {
     const tube = new THREE.Mesh(smallTubeGeometry, smallTubeMaterial)
 
     // 初始参数设置
     tube.userData = {
-      progress: i * 0.01 // 错开起始位置
+      progress: i * 0.04 // 错开起始位置
     }
 
     // 初始方向调整
     tube.rotation.x = Math.PI / 2
-    smallTubes.push(tube)
+    gls.smallTubes.push(tube)
     viewer.scene.add(tube)
   }
 }
