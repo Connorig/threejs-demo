@@ -153,7 +153,7 @@ export default class Viewer {
     //照相机配置
     var fov = 50 //拍摄距离
     var near = 0.1 //最小范围
-    var far = 1000 //最大范围
+    var far = 10000 //最大范围
     this.camera = new THREE.PerspectiveCamera(
       fov,
       window.innerWidth / window.innerHeight,
