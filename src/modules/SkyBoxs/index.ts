@@ -5,7 +5,7 @@ import { Sky } from '../type';
 /** 场景天空盒*/
 export default class SkyBoxs {
   protected viewer: Viewer;
-  
+
   constructor (viewer: Viewer) {
     this.viewer = viewer;
   }

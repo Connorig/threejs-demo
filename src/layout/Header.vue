@@ -4,7 +4,7 @@
       <slot></slot>
     </div>
   </div>
-  <div id="curr_time"  style="color: white; font-size: 60px; z-index: 22; position: absolute; top: 0; right: 10px">
+  <div id="curr_time"  style="color: white; font-size: 0.5rem; z-index: 22; position: absolute; top: 0; right: 10px">
     {{ currTime }}
   </div>
 </template>

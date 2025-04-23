@@ -146,12 +146,13 @@ export default class Viewer {
 
   private initScene() {
     this.scene = new Scene()
+    // this.scene.background = new THREE.Color(0x0f2036)
   }
 
   private initCamera() {
     //照相机配置
-    var fov = 40 //拍摄距离
-    var near = 1 //最小范围
+    var fov = 50 //拍摄距离
+    var near = 0.1 //最小范围
     var far = 1000 //最大范围
     this.camera = new THREE.PerspectiveCamera(
       fov,
@@ -161,9 +162,9 @@ export default class Viewer {
     )
     // 渲染相机
     //设置相机位置
-    this.camera.position.y = 40
-    this.camera.position.z = -60
-    this.camera.position.x = 59
+    this.camera.position.y = 121
+    this.camera.position.z = -200
+    this.camera.position.x = 390
 
     // const radius = 100 // 距离目标点的半径
     // const theta = Math.PI/20 // 方位角（绕 Y 轴旋转）
@@ -181,55 +182,68 @@ export default class Viewer {
     // 获取画布dom
     this.viewerDom = document.getElementById(this.id) as HTMLElement
     // 初始化渲染器
-    this.renderer = new WebGLRenderer({
-      logarithmicDepthBuffer: true,
-      antialias: true, // true/false表示是否开启反锯齿
-      alpha: true, // true/false 表示是否可以设置背景色透明
-      precision: 'mediump', // highp/mediump/lowp 表示着色精度选择
-      premultipliedAlpha: true // true/false 表示是否可以设置像素深度（用来度量图像的分辨率）
-      // preserveDrawingBuffer: false, // true/false 表示是否保存绘图缓冲
-      // physicallyCorrectLights: true, // true/false 表示是否开启物理光照
+    // this.renderer = new WebGLRenderer({
+    //   logarithmicDepthBuffer: true,
+    //   antialias: false, // true/false表示是否开启反锯齿
+    //   alpha: false, // true/false 表示是否可以设置背景色透明
+    //   precision: 'lowp', // highp/mediump/lowp 表示着色精度选择
+    //   premultipliedAlpha: false, // true/false 表示是否可以设置像素深度（用来度量图像的分辨率）
+    //   // preserveDrawingBuffer: false, // true/false 表示是否保存绘图缓冲
+    //   // physicallyCorrectLights: true, // true/false 表示是否开启物理光照
+    //   powerPreference: "high-performance"
+    // })
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: false,
+      powerPreference: 'high-performance'
     })
-    this.renderer.clearDepth()
 
-    this.renderer.shadowMap.enabled = true
-    this.renderer.outputColorSpace = SRGBColorSpace // 可以看到更亮的材质，同时这也影响到环境贴图。
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1)) // 限制像素比
+    this.renderer.setSize(window.innerWidth, window.innerHeight)
+    this.renderer.shadowMap.enabled = false // 禁用阴影提高性能
     this.viewerDom.appendChild(this.renderer.domElement)
+
+    // this.renderer.clearDepth()
+    // this.renderer.shadowMap.enabled = false
+    // this.renderer.outputColorSpace = SRGBColorSpace // 可以看到更亮的材质，同时这也影响到环境贴图。
+    // this.viewerDom.appendChild(this.renderer.domElement)
   }
 
   private initControl() {
     this.controls = new OrbitControls(this.camera as Camera, this.renderer?.domElement)
     this.controls.enableDamping = false
+    this.controls.dampingFactor = 0.05;
     this.controls.screenSpacePanning = false // 定义平移时如何平移相机的位置 控制不上下移动
-    this.controls.minDistance = 2
-    this.controls.maxDistance = 1000
-    this.controls.addEventListener('change', () => {
-      this.renderer.render(this.scene, this.camera)
-    })
+    // this.controls.minDistance = 2
+    // this.controls.maxDistance = 1000
+    // this.controls.addEventListener('change', () => {
+    //   this.renderer.render(this.scene, this.camera)
+    // })
   }
 
   private initSkybox() {
     if (!this.skyboxs) this.skyboxs = new SkyBoxs(this)
     this.skyboxs.addSkybox(Sky.night)
-    this.skyboxs.addFog()
+    // this.skyboxs.addFog()
   }
 
   private initLight() {
     const ambient = new AmbientLight(0xffffff, 0.6)
     this.scene.add(ambient)
 
-    const light = new THREE.DirectionalLight(0xffffff)
-    light.position.set(0, 200, 100)
-    light.castShadow = true
+    const light = new THREE.DirectionalLight(0xffffff,0.6)
+    light.position.set(1, 1, 1)
 
-    light.shadow.camera.top = 180
-    light.shadow.camera.bottom = -100
-    light.shadow.camera.left = -120
-    light.shadow.camera.right = 400
-    light.shadow.camera.near = 0.1
-    light.shadow.camera.far = 400
+    // light.position.set(0, 200, 100)
+    // light.castShadow = true
+
+    // light.shadow.camera.top = 180
+    // light.shadow.camera.bottom = -100
+    // light.shadow.camera.left = -120
+    // light.shadow.camera.right = 400
+    // light.shadow.camera.near = 0.1
+    // light.shadow.camera.far = 400
     // 设置mapSize属性可以使阴影更清晰，不那么模糊
-    light.shadow.mapSize.set(1024, 1024)
+    // light.shadow.mapSize.set(1024, 1024)
 
     this.scene.add(light)
   }

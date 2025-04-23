@@ -50,10 +50,18 @@ onMounted(() => {
   init()
   // 创建模型
   initModel()
-  // 实时更新卡片与模型的位置
-  animate()
   // 更新卡片数据(AJAX)
   setInterval(updateAllDevices2, 1000)
+
+  // 实时更新卡片与模型的位置
+  viewer.addAnimate({
+    fun: updateAllDevices,
+    content: viewer
+  })
+  viewer.addAnimate({
+    fun: runningSemllTubes,
+    content: viewer
+  })
 })
 
 // 主循环
@@ -154,7 +162,6 @@ const gls = []
 const initModel = async () => {
   // 清空所有模型与卡片对应数据
   deviceElements.clear()
-
   // 删除所有.device-info html元素
   document.querySelectorAll('.device-info').forEach((e) => {
     e.parentNode.removeChild(e)
@@ -163,9 +170,7 @@ const initModel = async () => {
   // 添加地板
   modelLoader.loadModelToScene('/models/plane.glb', (baseModel) => {
     const model = baseModel.gltf.scene
-    console.log('plane-------', model)
     model.scale.set(0.02, 0.01, 0.02)
-
     model.position.set(100, 0, 0)
     model.name = 'plane'
     baseModel.openCastShadow()
@@ -193,7 +198,7 @@ const initModel = async () => {
           name: '真空熔炼炉',
           x: 100,
           z: -12,
-          y: 1,
+          y: 2,
           status: 0,
           pi: Math.PI / -0.6,
           glb: '/industry013/industry015.glb',
@@ -213,7 +218,7 @@ const initModel = async () => {
           name: '绞线机-1',
           x: 30,
           z: -50,
-          y: 2,
+          y: 5,
           status: 1,
           pi: Math.PI * 2,
           glb: '/industry013/industry021.glb',
@@ -223,7 +228,7 @@ const initModel = async () => {
           name: '绞线机-2',
           x: 60,
           z: -50,
-          y: 2,
+          y: 5,
           status: 1,
           pi: Math.PI * 2,
           glb: '/industry013/industry021.glb',
@@ -233,7 +238,7 @@ const initModel = async () => {
           name: '绞线机-3',
           x: 90,
           z: -50,
-          y: 2,
+          y: 5,
           status: 1,
           pi: Math.PI * 2,
           glb: '/industry013/industry021.glb',
@@ -310,27 +315,28 @@ const initModel = async () => {
       uPath: []
     }
   )
-  const plant_width = 109
+
+  const plant_width = 110
   const plant_height = 70
   const thickness = 2
   for (let j = 0; j < gls.length; j++) {
     // 添加方块地板
     const ground = new THREE.Mesh(
       new THREE.BoxGeometry(plant_width, plant_height, thickness),
-      new THREE.MeshPhongMaterial({ color: 0x0f2137, depthWrite: false })
+      // new THREE.MeshPhongMaterial({ opacity: 0.1, color: 0x0f2137, depthWrite: false })
+      new THREE.MeshStandardMaterial({ color: 0x0f2137 })
     )
     ground.rotation.x = -Math.PI / 2
     ground.position.setX(gls[j].x + plant_width * 0.5)
     ground.position.setZ(gls[j].z + -plant_height * 0.5)
-    ground.receiveShadow = true
+    ground.receiveShadow = false
 
     // 添加墙面
     // 创建四面墙
     // 参数设置
     const floorSize = plant_width
-    const floorThickness = thickness
     const wallHeight = 4 // 墙面高度改为50更明显
-    const wallThickness = 1
+    const wallThickness = thickness / 2
 
     // 创建四面墙
     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x0f2137 })
@@ -405,7 +411,7 @@ const initModel = async () => {
       })
 
       const textMesh = new THREE.Mesh(textGeometry, textMaterial)
-      textMesh.position.x = 109 / 2 + j * 109 // 将文字放在地板上方
+      textMesh.position.x = plant_width / 2 + j * plant_width // 将文字放在地板上方
       textMesh.position.y = 2 // 将文字放在地板上方
       textMesh.position.z = -70 // 将文字放在地板上方
       viewer.scene.add(textMesh)
@@ -415,28 +421,25 @@ const initModel = async () => {
       // viewer.camera.lookAt(0, 0.5, 0); // 看向文字位置
 
       // 渲染场景（无动画）
-      viewer.renderer.render(viewer.scene, viewer.camera)
+      // viewer.renderer.render(viewer.scene, viewer.camera)
     })
 
     for (let i = 0; i < pos.length; i++) {
       let baseModel = await modelLoader.loadModelAsync(pos[i].glb)
-      let offsetX
-      let offsetZ
 
-      offsetX = plant_width * -0.5
-      offsetZ = plant_height * 0.5
+      let offsetX = plant_width * -0.5
+      let offsetZ = plant_height * 0.5
 
       let x = pos[i].x + offsetX
       let z = pos[i].z + offsetZ
       let y = pos[i].y
-      // baseModel.setScalc(8,5,8)
       baseModel.setScalc(pos[i].scalc)
       baseModel.object.rotation.y = pos[i].pi
       const model = baseModel.gltf.scene
-      // z += 0.5
+
       model.position.set(gp.x + x, gp.y + y, gp.z + z)
 
-      gls[j].uPath.push([model.position.x, 1, model.position.z])
+      gls[j].uPath.push([model.position.x, 2, model.position.z])
 
       model.name = `设备-${pos[i].name}`
       model.userData = {
@@ -456,43 +459,48 @@ const initModel = async () => {
             createDeviceInfo(item) // 为每个设备创建信息框
           }
         }
-        // p.push([gp.x + x, 1, gp.z + z])
+
         if (item.isMesh) {
-          // item.material.color.set(cl)
-          // 保留原有贴图
-          const originalMap = item.material.map
-          const normalMap = item.material.normalMap
-          const aoMap = item.material.aoMap
-          const roughnessMap = item.material.roughnessMap
-          const metalnessMap = item.material.metalnessMap
-
-          // 创建新金属材质
-          item.material = new THREE.MeshPhysicalMaterial({
-            metalness: 0.9, // 金属度（0-1）
-            roughness: 0.1, // 粗糙度（0-1）
-            color: 0xffffff, // 基础颜色
-            // envMap: viewer.sence.bac.background, // 环境贴图
-            map: originalMap,
-            normalMap: normalMap,
-            aoMap: aoMap,
-            roughnessMap: roughnessMap,
-            metalnessMap: metalnessMap,
-            transparent: true,
-            transmission: 0.1, // 透光率（可选）
-            clearcoat: 0.9 // 清漆层效果（可选）
-          })
+          item.castShadow = false
+          item.receiveShadow = false
         }
+        // if (item.isMesh) {
+        //   // item.material.color.set(cl)
+        //   // 保留原有贴图
+        //   const originalMap = item.material.map
+        //   const normalMap = item.material.normalMap
+        //   const aoMap = item.material.aoMap
+        //   const roughnessMap = item.material.roughnessMap
+        //   const metalnessMap = item.material.metalnessMap
+        //
+        //   // 创建新金属材质
+        //   item.material = new THREE.MeshPhysicalMaterial({
+        //     metalness: 0.9, // 金属度（0-1）
+        //     roughness: 0.1, // 粗糙度（0-1）
+        //     color: 0xffffff, // 基础颜色
+        //     // envMap: viewer.sence.bac.background, // 环境贴图
+        //     map: originalMap,
+        //     normalMap: normalMap,
+        //     aoMap: aoMap,
+        //     roughnessMap: roughnessMap,
+        //     metalnessMap: metalnessMap,
+        //     transparent: true,
+        //     transmission: 0.1, // 透光率（可选）
+        //     clearcoat: 0.9 // 清漆层效果（可选）
+        //   })
+        // }
       })
-
       modelLoader.viewer.scene.add(baseModel.object)
 
       model.traverse((item) => {
         rackList.push(item)
       })
     }
+
     //创建工序主要管道
     uPath = createPath(gls[j].uPath)
     gls[j].uPath = uPath
+
     let mainTube = createMainTube(uPath)
     viewer.scene.add(mainTube)
 
@@ -511,7 +519,7 @@ function createMainTube(path) {
   const material = new THREE.MeshPhongMaterial({
     color: 0x0b3992,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.4,
     side: THREE.DoubleSide
   })
 
