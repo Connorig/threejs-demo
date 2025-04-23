@@ -8,7 +8,6 @@
 </template>
 
 <script lang="ts" setup name="Sence">
-/* eslint-disable */
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { ref, onMounted, type Ref } from 'vue'
 import Viewer, { type Animate } from '@/modules/Viewer'
@@ -162,25 +161,26 @@ const initModel = async () => {
   })
 
   // 添加地板
-  // modelLoader.loadModelToScene('/models/plane.glb', (baseModel) => {
-  //   const model = baseModel.gltf.scene
-  //   // console.log('plane-------', model.children)
-  //   model.scale.set(0.001 * 10, 0.001 * 10, 0.001 * 10)
-  //   model.position.set(0, 0, 0)
-  //   model.name = 'plane'
-  //   baseModel.openCastShadow()
-  //   // 动画
-  //   const texture = (baseModel.object.children[0] as any).material.map
-  //   // const fnOnj = planeAnimate(texture)
-  //   // viewer.addAnimate(fnOnj)
-  // })
+  modelLoader.loadModelToScene('/models/plane.glb', (baseModel) => {
+    const model = baseModel.gltf.scene
+    console.log('plane-------', model)
+    model.scale.set(0.02, 0.01, 0.02)
+
+    model.position.set(100, 0, 0)
+    model.name = 'plane'
+    baseModel.openCastShadow()
+    // 动画
+    const texture = (baseModel.object.children[0] as any).material.map
+    const fnOnj = planeAnimate(texture)
+    viewer.addAnimate(fnOnj)
+  })
 
   const rackList: any[] = []
 
   gls.push(
     {
       floor: {
-        name: '1F 1楼',
+        name: '1F',
         enName: 'Second floor',
         x: 0,
         y: 0,
@@ -201,17 +201,17 @@ const initModel = async () => {
         },
         {
           name: '挤压机',
-          x: 50,
+          x: 30,
           z: -12,
           y: 0,
           status: 1,
-          pi: Math.PI * 2,
+          pi: Math.PI * 1.9,
           glb: '/industry013/industry022.glb',
           scalc: 10
         },
         {
           name: '绞线机-1',
-          x: 50,
+          x: 30,
           z: -50,
           y: 2,
           status: 1,
@@ -221,7 +221,7 @@ const initModel = async () => {
         },
         {
           name: '绞线机-2',
-          x: 66,
+          x: 60,
           z: -50,
           y: 2,
           status: 1,
@@ -231,7 +231,7 @@ const initModel = async () => {
         },
         {
           name: '绞线机-3',
-          x: 80,
+          x: 90,
           z: -50,
           y: 2,
           status: 1,
@@ -251,7 +251,7 @@ const initModel = async () => {
         y: 0,
         z: 0
       },
-      x: 100,
+      x: 115,
       z: 0,
       tubus: 5,
       devices: [
@@ -340,8 +340,7 @@ const initModel = async () => {
       new THREE.BoxGeometry(floorSize, wallHeight, wallThickness),
       wallMaterial
     )
-    // frontWall.position.set( plant_width * 0.5, wallHeight / 2 - floorThickness / 2, -plant_height)
-    frontWall.position.set(plant_width / 2, 2, 0)
+    frontWall.position.set(plant_width / 2 + j * plant_width + j * 5, 2, 0)
 
     viewer.scene.add(frontWall)
 
@@ -358,7 +357,7 @@ const initModel = async () => {
       new THREE.BoxGeometry(wallThickness, wallHeight, plant_height),
       wallMaterial
     )
-    leftWall.position.set(0, 2, -plant_height / 2)
+    leftWall.position.set(j * plant_width + j * 6, 2, -plant_height / 2)
     viewer.scene.add(leftWall)
 
     // 右墙 (x轴正方向)
@@ -366,7 +365,7 @@ const initModel = async () => {
       new THREE.BoxGeometry(wallThickness, wallHeight, plant_height),
       wallMaterial
     )
-    rightWall.position.set(plant_width, 2, -plant_height / 2)
+    rightWall.position.set(plant_width + j * plant_width + j * 6, 2, -plant_height / 2)
     viewer.scene.add(rightWall)
 
     modelLoader.viewer.scene.add(ground)
@@ -375,53 +374,49 @@ const initModel = async () => {
 
     let gp = ground?.position
 
-    const f2='https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_regular.typeface.json'
-    const chineseFontURL = "https://cdn.jsdelivr.net/gh/mrdoob/three.js/examples/fonts/helvetiker_regular.typeface.json";
+    const chineseFontURL = '/public/font/helvetiker_regular.typeface.json'
 
     // 创建3D文字"一楼"
-    loader.load(
-      chineseFontURL,
-      function (font) {
-        const textGeometry = new TextGeometry(gls[j].floor.name, {
-          font: font,
-          size: 10,
-          height: 2,
-          curveSegments: 12,
-          bevelEnabled: true,
-          bevelThickness: 0.03,
-          bevelSize: 0.02,
-          bevelOffset: 0,
-          bevelSegments: 5
-        })
+    loader.load(chineseFontURL, function (font) {
+      const textGeometry = new TextGeometry(gls[j].floor.name, {
+        font: font,
+        size: 10,
+        height: 2,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 0.03,
+        bevelSize: 0.02,
+        bevelOffset: 0,
+        bevelSegments: 5
+      })
 
-        // 解决文字镜像问题的关键步骤：
-        // 1. 先居中文字
-        textGeometry.computeBoundingBox()
-        const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x
-        textGeometry.translate(-textWidth / 2, 0, 0)
+      // 解决文字镜像问题的关键步骤：
+      // 1. 先居中文字
+      textGeometry.computeBoundingBox()
+      const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x
+      textGeometry.translate(-textWidth / 2, 0, 0)
 
-        // 2. 翻转几何体使其正面朝外
-        textGeometry.scale(-1, 1, 1) // X轴翻转
+      // 2. 翻转几何体使其正面朝外
+      textGeometry.scale(-1, 1, 1) // X轴翻转
 
-        const textMaterial = new THREE.MeshPhongMaterial({
-          color: 0xffffff,
-          side: THREE.DoubleSide // 双面材质确保翻转后可见
-        })
+      const textMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide // 双面材质确保翻转后可见
+      })
 
-        const textMesh = new THREE.Mesh(textGeometry, textMaterial)
-        textMesh.position.x = 109 / 2 +(j*109) // 将文字放在地板上方
-        textMesh.position.y = 2 // 将文字放在地板上方
-        textMesh.position.z = -70 // 将文字放在地板上方
-        viewer.scene.add(textMesh)
+      const textMesh = new THREE.Mesh(textGeometry, textMaterial)
+      textMesh.position.x = 109 / 2 + j * 109 // 将文字放在地板上方
+      textMesh.position.y = 2 // 将文字放在地板上方
+      textMesh.position.z = -70 // 将文字放在地板上方
+      viewer.scene.add(textMesh)
 
-        // 设置相机位置
-        // camera.position.set(3, 3, 5);
-        // camera.lookAt(0, 0.5, 0); // 看向文字位置
+      // 设置相机位置
+      // viewer.camera.position.set(0, 1, 0);
+      // viewer.camera.lookAt(0, 0.5, 0); // 看向文字位置
 
-        // 渲染场景（无动画）
-        viewer.renderer.render(viewer.scene, viewer.camera)
-      }
-    )
+      // 渲染场景（无动画）
+      viewer.renderer.render(viewer.scene, viewer.camera)
+    })
 
     for (let i = 0; i < pos.length; i++) {
       let baseModel = await modelLoader.loadModelAsync(pos[i].glb)
@@ -507,8 +502,6 @@ const initModel = async () => {
   viewer.setRaycasterObjects(rackList)
 }
 
-// 创建n个流动小管道
-const smallTubes = []
 var uPath = null
 
 // 创建主管道
@@ -527,14 +520,14 @@ function createMainTube(path) {
 
 // 创建流动小管道
 function createSmallTubes(gls) {
-  const smallTubeGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 100)
+  const smallTubeGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 100)
   const smallTubeMaterial = new THREE.MeshPhongMaterial({
     color: 0x3c7cec,
     emissive: 0x441100
   })
 
   // 创建3个不同起始位置的小管道
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 25; i++) {
     const tube = new THREE.Mesh(smallTubeGeometry, smallTubeMaterial)
 
     // 初始参数设置

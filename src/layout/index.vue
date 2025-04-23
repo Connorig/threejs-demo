@@ -1,22 +1,28 @@
 <template>
   <div class="layout">
-    <Header>云锦特导可视化系统</Header>
+    <Header>云锦-诸葛云可视化系统</Header>
     <div class="layout-content">
-      <!--      <div class="layout-content-left">-->
-      <!--        <Panel>-->
-      <!--          <div>向西28° 2023/04/02 12:00 正常</div>-->
-      <!--          <div>向西28° 2023/04/02 12:00 正常</div>-->
-      <!--          <div>向西28° 2023/04/02 12:00 正常</div>-->
-      <!--        </Panel>-->
-      <!--        <Panel>-->
-      <!--          <PieChart></PieChart>-->
-      <!--        </Panel>-->
-      <!--      </div>-->
-      <!--      <div class="layout-content-right">-->
-      <!--        <Panel>-->
-      <!--          <LineCharts></LineCharts>-->
-      <!--        </Panel>-->
-      <!--      </div>-->
+      <div class="layout-content-left">
+        <Panel>
+          <div>设备1 2025/04/23 12:00 <span style="color: red">异常</span></div>
+          <div>设备2 2025/04/23 13:00 <span style="color: green">异常</span></div>
+          <div>设备3 2025/04/23 14:00 <span style="color: green">异常</span></div>
+        </Panel>
+        <Panel>
+          <PieChart></PieChart>
+        </Panel>
+        <Panel>
+          <LineCharts></LineCharts>
+        </Panel>
+      </div>
+      <div class="layout-content-right">
+        <Panel>
+          <PieChart></PieChart>
+        </Panel>
+        <Panel>
+          <LineCharts></LineCharts>
+        </Panel>
+      </div>
       <Sence></Sence>
     </div>
   </div>
@@ -45,14 +51,14 @@ import PieChart from '@/components/Charts/PieChart.vue'
 .layout-content-left {
   position: absolute;
   left: 0.3rem;
-  top: 70px;
+  top: 80px;
   width: 30vw;
 }
 
 .layout-content-right {
   position: absolute;
-  right: 0.6rem;
-  top: 70px;
+  right: -2rem;
+  top: 80px;
   width: 30vw;
 }
 
